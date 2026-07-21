@@ -1,0 +1,14 @@
+fastapi==0.103.2
+uvicorn[standard]==0.23.2
+pydantic==2.4.2
+pydantic-settings==2.0.3
+redis==5.0.1
+pyjwt==2.8.0
+opencv-python==4.8.1.78
+mediapipe==0.10.7
+numpy==1.26.1
+sqlalchemy==2.0.21
+python-multipart==0.0.6
+pytest==7.4.2
+httpx==0.25.0
+fakeredis==2.19.0
