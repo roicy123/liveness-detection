@@ -31,7 +31,8 @@ env\Scripts\activate
 pip install -r requirements.txt
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
-Demo UI: `http://localhost:8000/demo/index.html`
+Interactive Swagger API Docs: `http://localhost:8000/docs`
+Diagnostic Demo UI: `http://localhost:8000/demo/index.html`
 
 ## Testing
 
