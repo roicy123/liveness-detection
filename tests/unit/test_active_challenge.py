@@ -36,16 +36,19 @@ def test_smile_pass(mock_neutral_landmarks):
     assert score == 1.0 # W=0.4, H=0.1, Ratio=4.0 > 2.8
 
 def test_open_mouth_fail(mock_neutral_landmarks):
-    # Normal inner mouth dist = 0.04. Face H = 0.8
-    # 0.04 / 0.8 = 0.05 < 0.08
-    score = check_open_mouth(mock_neutral_landmarks)
+    session_data = {}
+    # First call sets baseline
+    check_open_mouth(mock_neutral_landmarks, session_data)
+    score = check_open_mouth(mock_neutral_landmarks, session_data)
     assert score == 0.0
 
 def test_open_mouth_pass(mock_neutral_landmarks):
+    session_data = {}
+    check_open_mouth(mock_neutral_landmarks, session_data)
+    
     # Open jaw heavily
     mock_neutral_landmarks[14] = (0.5, 0.65, 0.0)
-    # dist = 0.17. 0.17 / 0.8 = 0.21 > 0.12
-    score = check_open_mouth(mock_neutral_landmarks)
+    score = check_open_mouth(mock_neutral_landmarks, session_data)
     assert score == 1.0
 
 def test_head_turn_right_pass(mock_neutral_landmarks):

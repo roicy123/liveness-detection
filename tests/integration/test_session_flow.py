@@ -67,3 +67,30 @@ def test_failure_injection_graceful_eval(monkeypatch):
     assert res.status_code == 200
     assert res.json()["classification"] == "unable_to_verify"
     assert "pipeline failed" in res.json()["reasons"][0]
+
+def test_challenge_timeout(monkeypatch):
+    import time
+    import app.api.routes.verify
+    
+    session_id, headers = _get_base_headers()
+    client.get(f"/session/{session_id}/challenge", headers=headers)
+    
+    original_time = time.time
+    monkeypatch.setattr(time, "time", lambda: original_time() + 15.0)
+    
+    # Mock heavy image components so we hit the logic cleanly
+    monkeypatch.setattr(app.api.routes.verify, "base64_to_image", lambda x: "img")
+    monkeypatch.setattr(app.api.routes.verify, "strip_exif", lambda x: "img")
+    monkeypatch.setattr(app.api.routes.verify, "detect_face", lambda x: {"landmarks": [], "bbox": (0,0,0,0)})
+    monkeypatch.setattr(app.api.routes.verify, "evaluate_passive_liveness", lambda *args: {})
+    monkeypatch.setattr(app.api.routes.verify, "evaluate_spoofing", lambda *args: {})
+    
+    payload = {
+        "nonce": "timeout-nonce",
+        "image_base64": "dummy"
+    }
+    
+    res = client.post(f"/session/{session_id}/frame", json=payload, headers=headers)
+    assert res.status_code == 200
+    assert res.json()["status"] == "rejected"
+    assert res.json()["rejected_reason"] == "Challenge timed out"

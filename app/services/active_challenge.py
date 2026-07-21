@@ -53,13 +53,16 @@ def check_smile(landmarks: List[Tuple[float, float, float]]) -> float:
         return 1.0
     return 0.0
 
-def check_open_mouth(landmarks: List[Tuple[float, float, float]]) -> float:
+def check_open_mouth(landmarks: List[Tuple[float, float, float]], session_data: Dict[str, Any]) -> float:
     mouth_h = _distance(landmarks[13], landmarks[14])
     face_h = _distance(landmarks[10], landmarks[152])
     if face_h == 0: return 0.0
     val = mouth_h / face_h
-    # Normal closed is ~0.02, any drop > 0.05 passes
-    if val > 0.05:
+    
+    accumulated = session_data.setdefault("accumulated_data", {})
+    baseline = accumulated.setdefault("baseline_mouth", val)
+    
+    if (val - baseline) > 0.03:
         return 1.0
     return 0.0
 
@@ -74,9 +77,9 @@ def check_head_turn(landmarks: List[Tuple[float, float, float]], direction: str)
     
     score = 0.0
     if direction == "turn_right":
-        if (d_right / d_left) > 1.25: score = 1.0 
+        if (d_left / d_right) > 1.25: score = 1.0 
     elif direction == "turn_left":
-        if (d_left / d_right) > 1.25: score = 1.0  
+        if (d_right / d_left) > 1.25: score = 1.0  
     elif direction == "look_up":
         face_h = _distance(landmarks[10], landmarks[152])
         if face_h > 0 and ((nose[1] - (left_eye[1] + right_eye[1])/2) / face_h) < 0.20:

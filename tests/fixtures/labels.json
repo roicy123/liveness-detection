@@ -1,0 +1,5 @@
+{
+    "synthetic_flat.jpg": "spoof_attack",
+    "synthetic_moire.jpg": "spoof_attack",
+    "synthetic_glare.jpg": "spoof_attack"
+}
