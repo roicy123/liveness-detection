@@ -1,57 +1,57 @@
 # Liveness Detection API
 
-A production-quality REST-API for facial liveness detection, combining passive liveness (OpenCV) and active challenge response verification (MediaPipe).
+A production-grade, REST-API-driven facial liveness detection system built in Python. This system classifies verification sessions as **Live Person**, **Spoof Attack**, or **Unable to Verify** by combining passive CV checks, active randomized challenge-response gating, and spoof detection thresholds via a Decision Fusion Engine.
 
-## Setup
+## Core Features
 
+* **Passive Liveness Checks:** Uses classical CV logic (Laplacian variance, 2D FFT, specular reflection mapping) to detect static printed photos and screen glares. Also implements depth variance cues and ambient lighting jump-detection.
+* **Active Challenge Gating:** Enforces real-time geometric facial mapping. Randomly issues 3 tasks with a 10-second timeout limit each:
+  * `blink`: Computes Eye Aspect Ratios (EAR) across historical frames to detect natural micro-blinks.
+  * `smile`: Maps Mouth Aspect Ratios (MAR) to catch horizontal corner stretching.
+  * `open_mouth`: Normalizes vertical lip distances.
+  * `turn_left` & `turn_right`: Mirror-agnostic spatial tracking for horizontal head movement.
+  * `look_up` & `look_down`: Tracks pitch alignment via nose-to-eye vertical offsets.
+  * `raise_eyebrows`: Detects relative vertical jumps in inner eyebrows.
+* **Decision Fusion Engine:** Mathematically weights exact active task successes, tracks passive frame anomalies, and subtracts spoof penalties to compute an end-to-end Confidence float.
+* **Rate Limiting & Security:** Integrated JWT authorization state handling and heavily rate-limited session routes via `slowapi` to protect against bots.
+* **Audit Logging:** Structured, PII-safe JSON logging tracking `Session Created`, `Timeouts`, and `Classifications` via `python-json-logger`.
+* **Zero-Dependency Frontend:** Includes a completely bare-bones HTML/Vanilla JS client to live-debug the API asynchronously directly from your browser.
+
+## Tech Stack
+
+* **Backend:** FastAPI, Python 3.11+
+* **Computer Vision:** OpenCV, MediaPipe Face Mesh
+* **State & Performance:** Redis (with local In-Memory Fallback), PyJWT
+* **Testing Suite:** Pytest (Unit, Geometric, & Integration flow testing)
+
+## Getting Started
+
+### 1. Run using Docker (Recommended)
+Automatically builds the backend environment alongside a local Redis state container.
 ```bash
 docker-compose up --build
 ```
-Alternatively, for local dev without Docker:
+
+### 2. Run locally via Python Virtual Environment
 ```bash
+python -m venv env
+env\Scripts\activate
 pip install -r requirements.txt
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-## Architecture Summary
-The system is built as a FastAPI service that relies on stateless endpoints coordinated via Redis (with an in-memory fallback). Frame-by-frame analysis pipelines sequentially trigger: `Face Detection` (MediaPipe Face Mesh), partial `Passive Liveness` (Texture/Blur), and `Active Challenge` completion tracking. The final classification fuses these scores via `Spoof Detector` checks and dynamic thresholding in the `Decision Fusion` engine.
+## How to Test the Demo Frontend
+The system ships with a fully automated, client-side browser playground for live review processes. 
 
-## Modular Structure
-- `app/api/`: Request routing and schemas.
-- `app/services/face_detector.py`: Single-face bounds and landmarks check via MediaPipe.
-- `app/services/passive_liveness.py`: CV-based blur/glare rules without CNN payload.
-- `app/services/active_challenge.py`: Gesture generation and sequencing.
-- `app/services/spoof_detector.py`: Scoring against Print/Screen replay.
-- `app/services/decision_fusion.py`: Rule-based thresholding for finalizing results.
-- `tests/`: Integration and unit tests per pipeline node.
+Once the API server is running, simply open your favorite browser and visit:
+👉 **[http://localhost:8000/demo/index.html](http://localhost:8000/demo/index.html)**
 
-## Usage Example
-```python
-import requests
+Click *Start Session*, allow Camera access, and perform the 3 randomly generated challenges! The browser will autonomously stream frames to the backend via polling, instantly transition on passing thresholds or timeouts, and mathematically classify your physical liveness.
 
-base_url = "http://localhost:8000"
+## Architecture & API Route Lifecycle
 
-# 1. Start Session
-s = requests.post(f"{base_url}/session").json()
-session_id = s["session_id"]
-headers = {"Authorization": f"Bearer {s['token']}"}
-
-# 2. Get Challenge
-chal = requests.get(f"{base_url}/session/{session_id}/challenge", headers=headers).json()
-print("Challenges:", chal)
-
-# 3. Submit Frame (Tiny 1x1 base64 GIF/PNG representation)
-frame_data = {"nonce": "1", "image_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="}
-res = requests.post(f"{base_url}/session/{session_id}/frame", json=frame_data, headers=headers)
-print("Frame Status:", res.json())
-
-# 4. Finalize
-fin = requests.post(f"{base_url}/session/{session_id}/finalize", json={"nonce": "2"}, headers=headers)
-print("Result:", fin.json())
-```
-
-## Assumptions & Limitations
-- **Model Choice**: Selected MediaPipe over depth/heavy CNN models to ensure high FPS on CPU and minimal dependencies. Very simple heuristics for Texture/Blur.
-- **Deepfake/Masks**: Deepfake detection and silicone mask detection remain structural extension points. They require dedicated DL models (like ONNX models).
-- **Depth Map**: True depth sensing is not assumed; geometry checks rely purely on monocular 2D landmarks layout.
-- **Storage**: In-memory store handles local quick dev. Redis is meant for production token storage. PII raw images are actively dropped after processing.
+The platform is designed for scalable microservice environments:
+1. `POST /session` -> Initializes a localized session JWT token and binds the active random challenges arrays. Rate-limited to 5/min per IP.
+2. `GET /session/{id}/challenge` -> Issues the active checklist instructions.
+3. `POST /session/{id}/frame` -> Ingests Base64 frames (capped at 20 frames/sec), routing them heavily through MediaPipe face validation, active threshold loops, and spoof variance models. 
+4. `POST /session/{id}/finalize` -> The Fusion array collapses the frame histories and outputs a clean `live_person`, `spoof_attack`, or `unable_to_verify` JSON response payload.
