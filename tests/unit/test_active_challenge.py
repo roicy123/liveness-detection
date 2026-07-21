@@ -21,19 +21,25 @@ def mock_neutral_landmarks():
     lm[1] = (0.5, 0.5, 0.0)
     lm[33] = (0.3, 0.4, 0.0)
     lm[263] = (0.7, 0.4, 0.0)
+    lm[234] = (0.3, 0.5, 0.0)
+    lm[454] = (0.7, 0.5, 0.0)
     return lm
 
 def test_smile_fail(mock_neutral_landmarks):
-    # Neutral resting face W=0.2, H=0.1. Ratio = 2.0 (below 2.4 threshold)
-    score = check_smile(mock_neutral_landmarks)
+    session_data = {}
+    check_smile(mock_neutral_landmarks, session_data)
+    score = check_smile(mock_neutral_landmarks, session_data)
     assert score == 0.0
     
 def test_smile_pass(mock_neutral_landmarks):
+    session_data = {}
+    check_smile(mock_neutral_landmarks, session_data)
+    
     # Stretch corners wide
     mock_neutral_landmarks[61] = (0.3, 0.5, 0.0)
     mock_neutral_landmarks[291] = (0.7, 0.5, 0.0)
-    score = check_smile(mock_neutral_landmarks)
-    assert score == 1.0 # W=0.4, H=0.1, Ratio=4.0 > 2.8
+    score = check_smile(mock_neutral_landmarks, session_data)
+    assert score == 1.0 
 
 def test_open_mouth_fail(mock_neutral_landmarks):
     session_data = {}
@@ -52,9 +58,10 @@ def test_open_mouth_pass(mock_neutral_landmarks):
     assert score == 1.0
 
 def test_head_turn_right_pass(mock_neutral_landmarks):
-    # Face turns right, nose shifts left relative to camera
+    session_data = {}
+    check_head_turn(mock_neutral_landmarks, "turn_right", session_data) # set baseline
+    
+    # Face turns right, nose shifts right relative to camera
     mock_neutral_landmarks[1] = (0.6, 0.5, 0.0)
-    # dist to left eye = 0.3. dist to right eye = 0.1
-    # Turn right ratio = 0.3 / 0.1 = 3.0 > 1.8
-    score = check_head_turn(mock_neutral_landmarks, "turn_right")
+    score = check_head_turn(mock_neutral_landmarks, "turn_right", session_data)
     assert score == 1.0

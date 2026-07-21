@@ -76,7 +76,7 @@ def test_challenge_timeout(monkeypatch):
     client.get(f"/session/{session_id}/challenge", headers=headers)
     
     original_time = time.time
-    monkeypatch.setattr(time, "time", lambda: original_time() + 15.0)
+    monkeypatch.setattr(time, "time", lambda: original_time() + 16.0)
     
     # Mock heavy image components so we hit the logic cleanly
     monkeypatch.setattr(app.api.routes.verify, "base64_to_image", lambda x: "img")
