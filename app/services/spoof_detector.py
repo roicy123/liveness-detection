@@ -1,17 +1,14 @@
 from typing import Dict, Any, Tuple
 
 def detect_printed_photo(passive_scores: Dict[str, float]) -> Tuple[float, str]:
-    """Score logic based on texture and blur for print attack."""
     score = (passive_scores.get("texture_score", 1.0) + passive_scores.get("blur_score", 1.0)) / 2.0
     return score, "printed_photo"
 
 def detect_screen_replay(passive_scores: Dict[str, float]) -> Tuple[float, str]:
-    """Score logic based on reflection and texture for screen replay."""
     score = (passive_scores.get("reflection_score", 1.0) + passive_scores.get("texture_score", 1.0)) / 2.0
     return score, "screen_replay"
 
 def detect_static_image(session_data: Dict[str, Any]) -> Tuple[float, str]:
-    """Check if motion/challenges were too static across frames."""
     accumulated = session_data.get("accumulated_data", {})
     passive_scores = accumulated.get("passive_scores", [])
     if passive_scores:
@@ -20,23 +17,15 @@ def detect_static_image(session_data: Dict[str, Any]) -> Tuple[float, str]:
     return 1.0, "static_image"
 
 def detect_deepfake(image_data: Any) -> Tuple[float, str]:
-    """
-    Extension point for deepfake detection.
-    Would typically use an ONNX model (e.g., EfficientNet trained on FaceForensics++).
-    """
+    # Extension stub for 2D classification (e.g. EfficientNet)
     return 1.0, "deepfake"
 
 def detect_ai_generated(image_data: Any) -> Tuple[float, str]:
-    """
-    Extension point for AI-generated face (StyleGAN/diffusion) detection.
-    """
+    # Extension stub for StyleGAN/Diffusion tracking
     return 1.0, "ai_generated_face"
 
 def detect_mask(image_data: Any) -> Tuple[float, str]:
-    """
-    Extension point for 3D silicone mask detection.
-    Can use depth maps if available, or specialized multispectral capture.
-    """
+    # Extension stub for 3D depth/multispectral
     return 1.0, "3d_mask"
 
 def evaluate_spoofing(passive_scores: Dict[str, float], session_data: Dict[str, Any]) -> Dict[str, Any]:

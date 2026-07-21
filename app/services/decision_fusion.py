@@ -2,10 +2,6 @@ from app.core.config import settings
 from typing import Dict, Any, List
 
 def fuse_session_decisions(session_data: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Implements a late fusion strategy.
-    Combines face-quality, passive-liveness, spoof-detectors, and actions using weighted heuristics.
-    """
     accumulated = session_data.get("accumulated_data", {})
     
     required_challenges = len(session_data.get("challenges", []))

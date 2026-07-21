@@ -36,7 +36,7 @@ def check_blink(landmarks: List[Tuple[float, float, float]], session_data: Dict[
     
     current_ear = _calculate_ear(landmarks)
     ear_history.append(current_ear)
-    ear_history = ear_history[-30:] # Rolling 30 frames
+    ear_history = ear_history[-30:] # Rolling window for EAR evaluation
     accumulated["ear_history"] = ear_history
     
     if len(ear_history) < 3: return 0.0

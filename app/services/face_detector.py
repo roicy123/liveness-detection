@@ -20,10 +20,6 @@ class FaceDetectionError(Exception):
         super().__init__(self.message)
 
 def detect_face(image: np.ndarray) -> Dict[str, Any]:
-    """
-    Detects exactly one face. Validates size and bounds.
-    Raises FaceDetectionError on failure.
-    """
     rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     results = face_mesh_detector.process(rgb_image)
     
