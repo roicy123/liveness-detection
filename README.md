@@ -12,6 +12,14 @@ A production-grade, REST-API-driven facial liveness detection system built in Py
   * `turn_left` & `turn_right`: Mirror-agnostic spatial tracking for horizontal head movement.
   * `look_up` & `look_down`: Tracks pitch alignment via nose-to-eye vertical offsets.
   * `raise_eyebrows`: Detects relative vertical jumps in inner eyebrows.
+
+### Architectural Note: Baseline Delta Tracking vs. Static Ratios
+Most legacy CV algorithms rely on rigid, hardcoded coordinate thresholds (e.g. "if EAR < 0.22, register a blink"). This introduces severe **biometric bias**, inherently dropping accuracy for users based purely on ethnicity, natural resting-face attributes, or camera focal lens distance. 
+
+This engine counteracts this completely by implementing dynamic **Baseline Delta Tracking**:
+- A resting physical baseline is instantly normalized against facial Width/Height dimensions across the very first ingested frames.
+- All subsequent gestures are calculated as a mathematical *delta offset* against this micro-baseline rather than a global constant (`(val - baseline) > delta`).
+- This guarantees completely equitable, seamless validation for all human face shapes & distances without sacrificing spoof variance bounds.
 * **Decision Fusion Engine:** Mathematically weights exact active task successes, tracks passive frame anomalies, and subtracts spoof penalties to compute an end-to-end Confidence float.
 * **Rate Limiting & Security:** Integrated JWT authorization state handling and heavily rate-limited session routes via `slowapi` to protect against bots.
 * **Audit Logging:** Structured, PII-safe JSON logging tracking `Session Created`, `Timeouts`, and `Classifications` via `python-json-logger`.
