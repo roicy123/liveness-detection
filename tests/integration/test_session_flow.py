@@ -1,25 +1,22 @@
 from fastapi.testclient import TestClient
 from app.main import app
+import time
 
 client = TestClient(app)
 
-def test_full_session_flow():
-    resp = client.post("/api/v1/session") # Note: router usually mounted at root, let's check main.py...
-    
-    # Actually, in main.py it's api_router without prefix.
-    # The routers in __init__.py have prefix="/session", so the path is /session
+def _get_base_headers():
     resp = client.post("/session")
     assert resp.status_code == 200
-    data = resp.json()
-    session_id = data["session_id"]
-    token = data["token"]
-    
-    headers = {"Authorization": f"Bearer {token}"}
+    token = resp.json()["token"]
+    session_id = resp.json()["session_id"]
+    return session_id, {"Authorization": f"Bearer {token}"}
+
+def test_full_session_flow():
+    session_id, headers = _get_base_headers()
     
     resp = client.get(f"/session/{session_id}/challenge", headers=headers)
     assert resp.status_code == 200
-    challenges = resp.json()["challenges"]
-    assert len(challenges) > 0
+    assert len(resp.json()["challenges"]) > 0
     
     resp = client.post(
         f"/session/{session_id}/finalize", 
@@ -28,3 +25,45 @@ def test_full_session_flow():
     )
     assert resp.status_code == 200
     assert resp.json()["classification"] in ["live_person", "spoof_attack", "unable_to_verify"]
+
+def test_reused_nonce():
+    session_id, headers = _get_base_headers()
+    client.get(f"/session/{session_id}/challenge", headers=headers)
+    
+    payload = {"nonce": "same-nonce"}
+    res1 = client.post(f"/session/{session_id}/finalize", json=payload, headers=headers)
+    assert res1.status_code == 200
+    
+    res2 = client.post(f"/session/{session_id}/finalize", json=payload, headers=headers)
+    assert res2.status_code == 422
+    assert "Nonce" in res2.json()["detail"]
+
+def test_expired_session(monkeypatch):
+    import app.core.config
+    monkeypatch.setattr(app.core.config.settings, "session_timeout_seconds", 0)
+    
+    resp = client.post("/session")
+    token = resp.json()["token"]
+    session_id = resp.json()["session_id"]
+    headers = {"Authorization": f"Bearer {token}"}
+    
+    time.sleep(0.1) # allow expiration
+    # Challenge GET should fail since token expired instantly, catching via PyJWT and returning 401
+    res = client.get(f"/session/{session_id}/challenge", headers=headers)
+    assert res.status_code == 401
+
+def test_failure_injection_graceful_eval(monkeypatch):
+    session_id, headers = _get_base_headers()
+    client.get(f"/session/{session_id}/challenge", headers=headers)
+    
+    def mock_fuse(*args, **kwargs):
+        raise RuntimeError("Injected heavy failure")
+        
+    import app.api.routes.verify
+    monkeypatch.setattr(app.api.routes.verify, "fuse_session_decisions", mock_fuse)
+    
+    payload = {"nonce": "dummy-fail-123"}
+    res = client.post(f"/session/{session_id}/finalize", json=payload, headers=headers)
+    assert res.status_code == 200
+    assert res.json()["classification"] == "unable_to_verify"
+    assert "pipeline failed" in res.json()["reasons"][0]

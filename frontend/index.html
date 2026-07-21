@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Liveness Detection Demo</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 600px;
+            margin: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        video {
+            width: 100%;
+            border: 1px solid #ccc;
+            background: #eee;
+            border-radius: 8px;
+        }
+
+        .error {
+            color: #d00;
+            font-family: monospace;
+            white-space: pre-wrap;
+            background: #fee;
+            padding: 10px;
+        }
+
+        .success {
+            color: #080;
+            font-weight: bold;
+            background: #efe;
+            padding: 10px;
+        }
+
+        button {
+            padding: 12px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            background: #007bff;
+            color: white;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Liveness Detection API</h1>
+
+    <div>
+        <button id="startBtn">1. Start Session</button>
+    </div>
+
+    <div id="sessionInfo" style="display:none; background:#f9f9f9; padding: 10px; border-left: 4px solid #007bff;">
+        <p style="margin: 5px 0;"><strong>Session ID:</strong> <span id="sid"></span></p>
+        <p style="margin: 5px 0;"><strong>Active Challenges:</strong> <span id="challenges" style="color:#d00;"></span>
+        </p>
+    </div>
+
+    <!-- Live Preview -->
+    <video id="video" autoplay playsinline></video>
+    <canvas id="canvas" style="display:none;"></canvas>
+
+    <div style="display:flex; gap: 10px;">
+        <button id="captureBtn" disabled>2. Capture & Submit Frame</button>
+        <button id="finalizeBtn" disabled>3. Finalize Session</button>
+    </div>
+
+    <h3>API Status</h3>
+    <pre id="statusMsg">Ready.</pre>
+
+    <script>
+        const API = "http://localhost:8000";
+        let token = "";
+        let sessionId = "";
+        let nonceCounter = 0;
+
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const startBtn = document.getElementById('startBtn');
+        const captureBtn = document.getElementById('captureBtn');
+        const finalizeBtn = document.getElementById('finalizeBtn');
+        const statusMsg = document.getElementById('statusMsg');
+
+        // Request camera
+        navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+            .then(stream => video.srcObject = stream)
+            .catch(e => setMsg("Camera Error: " + e.message, true));
+
+        function setMsg(msg, isError = false) {
+            statusMsg.textContent = typeof msg === 'object' ? JSON.stringify(msg, null, 2) : msg;
+            statusMsg.className = isError ? 'error' : '';
+        }
+
+        async function fetchAPI(path, opts = {}) {
+            if (token) {
+                opts.headers = opts.headers || {};
+                opts.headers['Authorization'] = `Bearer ${token}`;
+            }
+            const res = await fetch(API + path, opts);
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(`HTTP ${res.status}: ${text}`);
+            }
+            return await res.json();
+        }
+
+        let autoCaptureInterval;
+
+        startBtn.onclick = async () => {
+            try {
+                setMsg("Starting session...");
+                const data = await fetchAPI('/session', { method: 'POST' });
+                sessionId = data.session_id;
+                token = data.token;
+
+                document.getElementById('sessionInfo').style.display = 'block';
+                document.getElementById('sid').textContent = sessionId;
+
+                const chal = await fetchAPI(`/session/${sessionId}/challenge`);
+                document.getElementById('challenges').textContent = chal.challenges.join(" ➜ ");
+
+                captureBtn.disabled = false;
+                finalizeBtn.disabled = true;
+                setMsg("Session active. Perform the challenges!");
+
+                // Auto-capture every 1000ms (1 second) so you don't have to click repeatedly
+                if (autoCaptureInterval) clearInterval(autoCaptureInterval);
+                autoCaptureInterval = setInterval(captureFrame, 1000);
+
+            } catch (e) { setMsg(e.message, true); }
+        };
+
+        async function captureFrame() {
+            try {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                canvas.getContext('2d').drawImage(video, 0, 0);
+                const base64Img = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+
+                nonceCounter++;
+                const payload = {
+                    nonce: `frame-nonce-${Date.now()}-${nonceCounter}`,
+                    image_base64: base64Img
+                };
+
+                setMsg("Sending frame for analysis...");
+                const data = await fetchAPI(`/session/${sessionId}/frame`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                setMsg(data);
+                if (data.status === 'ready_to_finalize') {
+                    clearInterval(autoCaptureInterval); // Stop capturing
+                    finalizeBtn.disabled = false;
+                    captureBtn.disabled = true;
+                    setMsg("Challenges perfectly passed! Click Finalize.");
+                }
+            } catch (e) {
+                setMsg(e.message, true);
+                // Optionally don't kill the interval on a random bad frame (e.g. face out of bounds)
+            }
+        }
+
+        captureBtn.onclick = captureFrame; // Allow manual override if needed
+
+        finalizeBtn.onclick = async () => {
+            try {
+                nonceCounter++;
+                setMsg("Finalizing...");
+                const payload = { nonce: `final-nonce-${Date.now()}-${nonceCounter}` };
+                const data = await fetchAPI(`/session/${sessionId}/finalize`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                setMsg(data);
+                if (data.classification === 'live_person') {
+                    statusMsg.className = 'success';
+                } else {
+                    statusMsg.className = 'error';
+                }
+            } catch (e) { setMsg(e.message, true); }
+        };
+    </script>
+</body>
+
+</html>

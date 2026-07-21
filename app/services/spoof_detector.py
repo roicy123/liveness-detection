@@ -12,7 +12,11 @@ def detect_screen_replay(passive_scores: Dict[str, float]) -> Tuple[float, str]:
 
 def detect_static_image(session_data: Dict[str, Any]) -> Tuple[float, str]:
     """Check if motion/challenges were too static across frames."""
-    # TODO: Analyze variance of landmarks across accumulated frames.
+    accumulated = session_data.get("accumulated_data", {})
+    passive_scores = accumulated.get("passive_scores", [])
+    if passive_scores:
+        latest = passive_scores[-1]
+        return latest.get("natural_motion_score", 1.0), "static_image"
     return 1.0, "static_image"
 
 def detect_deepfake(image_data: Any) -> Tuple[float, str]:

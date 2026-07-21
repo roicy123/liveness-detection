@@ -28,26 +28,42 @@ def fuse_session_decisions(session_data: Dict[str, Any]) -> Dict[str, Any]:
             "reasons": ["No valid frames processed."]
         }
         
-    latest_passive = passive_scores[-1]
-    avg_passive_score = sum(latest_passive.values()) / max(len(latest_passive), 1)
+    total_passive_keys = passive_scores[0].keys()
+    avg_passive_scores = {}
+    for key in total_passive_keys:
+        avg_passive_scores[key] = sum(s.get(key, 1.0) for s in passive_scores) / len(passive_scores)
+    
+    avg_passive_score = sum(avg_passive_scores.values()) / max(len(avg_passive_scores), 1)
     
     spoof_scores = accumulated.get("spoof_scores", [])
-    latest_spoof = spoof_scores[-1] if spoof_scores else {"lowest_score": 1.0, "most_likely_attack": "none"}
+    worst_spoof = 1.0
+    most_likely_attack = "none"
+    if spoof_scores:
+        worst_spoof = min(s.get("lowest_score", 1.0) for s in spoof_scores)
+        for s in spoof_scores:
+            if s.get("lowest_score", 1.0) == worst_spoof:
+                most_likely_attack = s.get("most_likely_attack", "none")
+                break
     
-    spoof_penalty = 1.0 - latest_spoof.get("lowest_score", 1.0)
+    spoof_penalty = 1.0 - worst_spoof
     
-    if latest_spoof.get("most_likely_attack", "none") != "none":
-        reasons.append(f"Detected potential spoof attack: {latest_spoof['most_likely_attack']}")
+    if most_likely_attack != "none":
+        reasons.append(f"Detected potential spoof attack: {most_likely_attack}")
         
     challenge_score = min(active_passed / required_challenges, 1.0)
+    failed_challenges = session_data.get("failed_challenges", [])
+    
     if challenge_score < 1.0:
-        reasons.append(f"Passed {active_passed} out of {required_challenges} challenges")
+        if failed_challenges:
+            reasons.append(f"Failed challenge(s) (timed out): {', '.join(failed_challenges)}")
+        else:
+            reasons.append(f"Passed {active_passed} out of {required_challenges} challenges")
         
     # Priors / Weights derived empirically from validation sets
     weights = {
-        "passive": 0.4,
-        "challenge": 0.4,
-        "spoof_penalty": 0.2
+        "passive": 0.5,
+        "challenge": 0.5,
+        "spoof_penalty": 0.3
     }
     
     base_confidence = (avg_passive_score * weights["passive"]) + (challenge_score * weights["challenge"])

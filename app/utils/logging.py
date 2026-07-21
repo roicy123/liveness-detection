@@ -1,15 +1,14 @@
 import logging
-import sys
+from pythonjsonlogger import jsonlogger
 
-def setup_logger(name: str):
+def setup_logger(name: str) -> logging.Logger:
     logger = logging.getLogger(name)
     if not logger.handlers:
         logger.setLevel(logging.INFO)
-        handler = logging.StreamHandler(sys.stdout)
-        # Ensure we don't log PII (like raw faces) in formats
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
+        logHandler = logging.StreamHandler()
+        formatter = jsonlogger.JsonFormatter('%(asctime)s %(levelname)s %(name)s %(message)s')
+        logHandler.setFormatter(formatter)
+        logger.addHandler(logHandler)
     return logger
 
-logger = setup_logger("liveness")
+audit_logger = setup_logger("audit")
