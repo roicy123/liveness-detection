@@ -86,8 +86,15 @@ if __name__ == "__main__":
                 # If no face, it's definitely unable to verify / rejected
                 predicted = "unable_to_verify"
                 
-            reports.append({"actual": actual_label, "predicted": predicted})
+            reports.append({
+                "filename": filename,
+                "actual": actual_label, 
+                "predicted": predicted
+            })
             
+        print("\n--- Per-File Breakdown ---")
+        for r in reports:
+            print(f"{r['filename']:<25} | Actual: {r['actual']:<15} | Predicted: {r['predicted']}")
         if not real_images_found:
             print("\nWARNING: Evaluated against synthetic samples only — APCER/BPCER are ")
             print("not representative of real-world performance until real fixture images")
