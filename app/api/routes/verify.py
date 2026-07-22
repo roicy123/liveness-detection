@@ -85,7 +85,6 @@ def submit_frame(request: Request, session_id: str, req: VerifyFrameRequest, cre
                 SessionManager.save_session(session_id, session_data)
                 return FrameStatusResponse(status="rejected", rejected_reason="Challenge timed out")
 
-            score = 0.0
             if current_challenge == "blink":
                 score = check_blink(landmarks, session_data)
             elif current_challenge == "smile":
