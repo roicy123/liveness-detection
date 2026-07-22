@@ -89,11 +89,11 @@ def submit_frame(request: Request, session_id: str, req: VerifyFrameRequest, cre
             if current_challenge == "blink":
                 score = check_blink(landmarks, session_data)
             elif current_challenge == "smile":
-                score = check_smile(landmarks)
+                score = check_smile(landmarks, session_data)
             elif current_challenge == "open_mouth":
                 score = check_open_mouth(landmarks, session_data)
             elif current_challenge in ["turn_left", "turn_right", "look_up", "look_down"]:
-                score = check_head_turn(landmarks, current_challenge)
+                score = check_head_turn(landmarks, current_challenge, session_data)
             elif current_challenge == "raise_eyebrows":
                 score = check_raise_eyebrows(landmarks, session_data)
                 
