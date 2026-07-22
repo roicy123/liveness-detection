@@ -4,12 +4,14 @@ from typing import Dict, Any, List, Tuple
 from app.services.active_challenge import _calculate_ear
 
 def check_blur(image: np.ndarray) -> float:
+    """Uses Laplacian variance to compute a focus measure (blurriness)."""
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     variance = cv2.Laplacian(gray, cv2.CV_64F).var()
     score = min(variance / 200.0, 1.0)
     return float(score)
 
 def check_texture(image: np.ndarray) -> float:
+    """Frequency-domain texture check to find moire patterns or print texture."""
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     f = np.fft.fft2(gray)
     fshift = np.fft.fftshift(f)
@@ -35,6 +37,7 @@ def check_texture(image: np.ndarray) -> float:
     return float(score)
 
 def check_reflection(image: np.ndarray, bbox: tuple) -> float:
+    """Detect specular highlights common in screen glare."""
     x, y, w, h = [int(v) for v in bbox]
     face_roi = image[max(0, y):y+h, max(0, x):x+w]
     if face_roi.size == 0: return 1.0

@@ -2,6 +2,10 @@ from app.core.config import settings
 from typing import Dict, Any, List
 
 def fuse_session_decisions(session_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Implements a late fusion strategy.
+    Combines face-quality, passive-liveness, spoof-detectors, and actions using weighted heuristics.
+    """
     accumulated = session_data.get("accumulated_data", {})
     
     required_challenges = len(session_data.get("challenges", []))
@@ -62,19 +66,9 @@ def fuse_session_decisions(session_data: Dict[str, Any]) -> Dict[str, Any]:
         "spoof_penalty": 0.3
     }
     
-    from app.utils.logging import audit_logger
-    
     base_confidence = (avg_passive_score * weights["passive"]) + (challenge_score * weights["challenge"])
     final_confidence = base_confidence - (spoof_penalty * weights["spoof_penalty"])
     final_confidence = max(0.0, min(final_confidence, 1.0))
-    
-    audit_logger.debug("Decision Fusion Raw Math", extra={
-        "avg_passive_score": avg_passive_score,
-        "challenge_score": challenge_score,
-        "spoof_penalty": spoof_penalty,
-        "base_confidence": base_confidence,
-        "final_confidence": final_confidence
-    })
     
     classification = "unable_to_verify"
     

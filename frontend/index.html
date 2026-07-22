@@ -150,12 +150,7 @@
             try {
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
-                const ctx = canvas.getContext('2d');
-                // Standardize frames: un-mirror the webcam image so real-world coordinates match exactly!
-                ctx.translate(canvas.width, 0);
-                ctx.scale(-1, 1);
-                ctx.drawImage(video, 0, 0);
-
+                canvas.getContext('2d').drawImage(video, 0, 0);
                 const base64Img = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
 
                 nonceCounter++;
