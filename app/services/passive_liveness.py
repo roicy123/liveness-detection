@@ -60,8 +60,10 @@ def check_lighting_consistency(image: np.ndarray, session_data: Dict[str, Any]) 
         accumulated["lum_history"] = []
     
     lum_history = accumulated["lum_history"]
-    score = 1.0
+    score = 0.5 # Neutral baseline until we have enough history to prove consistency
+    
     if len(lum_history) > 2:
+        score = 1.0
         mean_past = np.mean(lum_history)
         std_past = np.std(lum_history)
         if std_past > 0 and abs(mean_lum - mean_past) > (2.5 * std_past):
@@ -81,7 +83,7 @@ def check_natural_motion(landmarks: List[Tuple[float, float, float]], session_da
     history.append((cx, cy))
     
     if len(history) < 5:
-        return 1.0
+        return 0.5 # Neutral baseline until we have enough frames to prove variance
         
     xs = [p[0] for p in history]
     ys = [p[1] for p in history]

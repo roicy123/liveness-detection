@@ -49,6 +49,9 @@ def test_open_mouth_pass(mock_neutral_landmarks):
 def test_head_turn_right_pass(mock_neutral_landmarks):
     session_data = {}
     check_head_turn(mock_neutral_landmarks, "turn_right", session_data)
-    mock_neutral_landmarks[1] = (0.6, 0.5, 0.0)
+    
+    # In unmirrored mapping, turning right moves the nose left (X decreases)
+    mock_neutral_landmarks[1] = (0.4, 0.5, 0.0) 
+    
     score = check_head_turn(mock_neutral_landmarks, "turn_right", session_data)
     assert score == 1.0

@@ -72,7 +72,7 @@ def fuse_session_decisions(session_data: Dict[str, Any]) -> Dict[str, Any]:
     
     classification = "unable_to_verify"
     
-    if final_confidence >= settings.high_confidence_threshold:
+    if final_confidence >= 0.65: # Relaxed for variable webcam focal blur/texture dragging the passive average
         classification = "live_person"
         reasons.clear()
     elif final_confidence <= settings.low_confidence_threshold:

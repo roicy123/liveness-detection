@@ -93,9 +93,11 @@ def check_head_turn(landmarks: List[Tuple[float, float, float]], direction: str,
         normalized_shift = (nose[0] - baseline_nose_x) / face_width
 
         if direction == "turn_right":
-            if normalized_shift > 0.08: score = 1.0
-        elif direction == "turn_left":
+            # In un-mirrored raw canvas extracts, turning physical right shifts the nose left (negative)
             if normalized_shift < -0.08: score = 1.0
+        elif direction == "turn_left":
+            # Turning physical left shifts the nose right (positive)
+            if normalized_shift > 0.08: score = 1.0
 
     elif direction in ["look_up", "look_down"]:
         left_eye = landmarks[33]
@@ -108,9 +110,9 @@ def check_head_turn(landmarks: List[Tuple[float, float, float]], direction: str,
         delta = pitch_val - baseline_pitch
 
         if direction == "look_up":
-            if delta < -0.035: score = 1.0
+            if delta < -0.012: score = 1.0
         elif direction == "look_down":
-            if delta > 0.035: score = 1.0
+            if delta > 0.012: score = 1.0
 
     return score
 

@@ -48,6 +48,16 @@ Once the API server is running, simply open your favorite browser and visit:
 
 Click *Start Session*, allow Camera access, and perform the 3 randomly generated challenges! The browser will autonomously stream frames to the backend via polling, instantly transition on passing thresholds or timeouts, and mathematically classify your physical liveness.
 
+### How to physically perform the challenges:
+* **`turn_left`**: Turn your actual physical head to the **left** side of your desk. (Do *not* try to match the mirror image on your screen—just turn your real left!).
+* **`turn_right`**: Turn your actual physical head to the **right**.
+* **`look_up`**: Tilt your chin up towards the ceiling.
+* **`look_down`**: Tuck your chin slightly down towards your chest.
+* **`smile`**: Flare the corners of your mouth out horizontally to bare your teeth. (A wide grin works best).
+* **`open_mouth`**: Drop your jaw visibly. An exaggerated "AHHH" sound gives the best vertical clearance.
+* **`raise_eyebrows`**: Lift your eyebrows up away from your eyes like you are extremely surprised!
+* **`blink`**: Close both eyes fully for a distinct second, then open them wide. Make it a deliberate blink rather than a rapid micro-twitch!
+
 ## Architecture & API Route Lifecycle
 
 The platform is designed for scalable microservice environments:
